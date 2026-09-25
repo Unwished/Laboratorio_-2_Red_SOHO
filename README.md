@@ -22,6 +22,8 @@ La infraestructura se divide en tres dominios principales interconectados:
 [ Red LAN Interna ] <---> [ R_SOHO ] <---> [ Nube WAN / ISPs ] <---> [ R_SERVERS ] <---> [ Zona DMZ ]
 ```
 
+![topología](image1.png)
+
 ### 2.1 Segmentación de VLANs (Intranet Local)
 
 | VLAN | Nombre / Función | Subred | Máscara | Gateway por Defecto |
@@ -30,6 +32,8 @@ La infraestructura se divide en tres dominios principales interconectados:
 | **VLAN 40** | Gestión y Servidores | `172.16.8.0/24` | `255.255.255.0` | `172.16.8.254` |
 | **VLAN 80** | Intranet / Datos | `172.16.4.0/22` | `255.255.252.0` | `172.16.7.254` |
 | **VLAN 99** | Nativa / Administración | `172.16.9.0/24` | `255.255.255.0` | `172.16.9.254` |
+
+
 
 ### 2.2 Enlaces Punto a Punto WAN (/30)
 
@@ -41,6 +45,8 @@ La infraestructura se divide en tres dominios principales interconectados:
 | **ISP_NET - ISP_TX** | `200.40.40.0/30` | `200.40.40.1` (Serial0/2/1) | `200.40.40.2` (Serial0/2/0) |
 | **ISP_TX - R_SERVERS** | `200.50.50.0/30` | `200.50.50.1` (Serial0/2/1) | `200.50.50.2` (Serial0/2/0) |
 
+
+
 ### 2.3 Segmento DMZ (/24)
 - **Subred DMZ:** `200.100.10.0/24`
 - **Gateway en R_SERVERS (FastEthernet0/0):** `200.100.10.1`
@@ -48,6 +54,8 @@ La infraestructura se divide en tres dominios principales interconectados:
 - **Web Server Público:** `200.100.10.20`
 
 ---
+
+
 
 ## 3. Seguridad de Capa 2: Apagado de Puertos en Desuso
 
@@ -88,7 +96,11 @@ interface range FastEthernet0/7 - 24
 exit
 write memory
 ```
+![CLI SW1_INTRANET](image2.png)
 
+![CLI SW2_INTRANET](image3.png)
+
+![CLI SW3_INTRANET](image4.png)
 ---
 
 ## 4. Enrutamiento WAN y Protocolo OSPFv2
@@ -229,6 +241,9 @@ router ospf 1
 end
 write memory
 ```
+![CLI_R_SOHO](image5.png)
+
+![CLI_R_SOHO_.2](image6.png)
 
 ---
 
@@ -237,7 +252,7 @@ write memory
 ### 5.1 Configuración de Servidores en DMZ
 - **DNS Server Público (`200.100.10.10`):**
   - IP: `200.100.10.10`, Máscara: `255.255.255.0`, Gateway: `200.100.10.1`.
-  - Servicio DNS habilitado (ON). Registro tipo A asociando `www.miempresa.com` con `200.100.10.20`.
+  - Servicio DNS habilitado (ON). Registro tipo A asociando `www.jsj.net` con `200.100.10.20`.
 - **Web Server Público (`200.100.10.20`):**
   - IP: `200.100.10.20`, Máscara: `255.255.255.0`, Gateway: `200.100.10.1`.
   - Servicios HTTP y HTTPS activos (ON).
@@ -249,10 +264,14 @@ Para garantizar la resolución del dominio público sin alterar las directivas D
 1. Se accedió al servidor **`Server-PT DHCP Server`** (`172.16.8.10`).
 2. En la pestaña **Services** -> **DNS**, se habilitó el servicio.
 3. Se añadió un registro de recurso tipo A:
-   - **Nombre de dominio:** `www.miempresa.com`
+   - **Nombre de dominio:** `www.jsj.net`
    - **Dirección IP:** `200.100.10.20`
 
 El cliente interno realiza la consulta a su servidor DNS local asignado y este responde directamente con la IP de la DMZ, respetando la estructura jerárquica corporativa.
+
+![Server-PT DHCP Server](image7.png)
+
+![WEB SERVER](image8.png)
 
 ---
 
@@ -262,6 +281,8 @@ El cliente interno realiza la consulta a su servidor DNS local asignado y este r
 Durante las pruebas de administración desde PC3 y el servidor DHCP hacia la dirección IP `172.16.8.15`, el navegador desplegó el error `Server Reset Connection`.
 
 El problema se originó por el intento de conexión mediante el protocolo HTTP no seguro (`http://172.16.8.15`). El controlador de red inalámbrica WLC 3504 requiere conexiones cifradas a través de HTTPS. Al ingresar la URL **`https://172.16.8.15`**, el WLC entregó la interfaz gráfica de inicio de sesión.
+
+![interfaz de administración del WLC](image9.png)
 
 ### 6.2 Habilitación de Interfaz de Switch hacia el Access Point (AP)
 Se identificó que el enlace físico del switch `SW2_INTRANET` hacia el Access Point en el puerto `FastEthernet0/3` se encontraba inactivo. Se ejecutó la habilitación y asignación del enlace troncal:
@@ -307,9 +328,14 @@ S*   0.0.0.0/0 is directly connected, Serial0/0/1
 | **PC3** | Gateway VLAN 80 (`172.16.7.254`) | `ping 172.16.7.254` | 0% pérdida de paquetes | Exitoso |
 | **PC3** | Servidor DNS DMZ (`200.100.10.10`) | `ping 200.100.10.10` | 0% pérdida de paquetes | Exitoso |
 | **PC3** | Servidor Web DMZ (`200.100.10.20`) | `ping 200.100.10.20` | 0% pérdida de paquetes | Exitoso |
-| **PC3** | Dominio Web DMZ | `ping www.miempresa.com` | Resuelve IP `200.100.10.20` | Exitoso |
-| **PC3** | Servicio HTTP DMZ | Navegador Web `http://www.miempresa.com` | Carga de portal index HTML | Exitoso |
+| **PC3** | Dominio Web DMZ | `ping www.jsj.net` | Resuelve IP `200.100.10.20` | Exitoso |
+| **PC3** | Servicio HTTP DMZ | Navegador Web `http://www.jsj.net` | Carga de portal index HTML | Exitoso |
 | **PC3** | Gestión WLC (`172.16.8.15`) | Navegador Web `https://172.16.8.15` | Carga de panel de inicio de sesión | Exitoso |
+
+
+![Ping Command Prompt](image10.png)
+
+![Pagina web](image11.png)
 
 ---
 
@@ -324,7 +350,7 @@ Se documenta la secuencia de prompts utilizados para el diagnóstico, la generac
 > **Prompt:** "Proporciona las secuencias de comandos Cisco IOS para los routers R_SOHO, ISP_BOGOTA, ISP_NET, ISP_TX y R_SERVERS. Asigna las direcciones IP /30 en las interfaces seriales, activa las interfaces con 'no shutdown' y configura OSPFv2 Área 0. En R_SOHO, configura la ruta por defecto y su inyección automática con 'default-information originate'."
 
 ### Prompt 3: Diagnóstico de Resolución DNS en Red Local
-> **Prompt:** "Las estaciones internas reciben la IP DNS 172.16.8.10 por DHCP. Responden el ping por IP al servidor público 200.100.10.20, pero no resuelven la URL www.miempresa.com. Determina si se debe editar el pool DHCP o agregar el registro A en el servidor DNS interno para resolver el nombre respetando las restricciones de la guía de laboratorio."
+> **Prompt:** "Las estaciones internas reciben la IP DNS 172.16.8.10 por DHCP. Responden el ping por IP al servidor público 200.100.10.20, pero no resuelven la URL www.jsj.net. Determina si se debe editar el pool DHCP o agregar el registro A en el servidor DNS interno para resolver el nombre respetando las restricciones de la guía de laboratorio."
 
 ### Prompt 4: Diagnóstico de Errores de Conexión HTTP/HTTPS
 > **Prompt:** "Al intentar acceder desde PC3 a la IP del WLC 172.16.8.15 el navegador muestra el mensaje 'Server Reset Connection'. Analiza las causas asociadas al protocolo de gestión web y proporciona la solución técnica para restablecer el acceso a la administración del controlador."
